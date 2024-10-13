@@ -2,7 +2,7 @@
 
 just country borders using three.js
 
-URL: https://lzpel.github.io/earth-border-react-three-fiber/
+DEMO: https://lzpel.github.io/earth-border-react-three-fiber/
 
 ![img](media/img.png)
 
