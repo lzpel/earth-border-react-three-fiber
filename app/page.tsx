@@ -1,5 +1,4 @@
 "use client"
-import * as THREE from 'three'
 import React from 'react'
 import {Canvas, extend} from '@react-three/fiber'
 import {MeshLineGeometry, MeshLineMaterial} from 'meshline'
@@ -35,13 +34,13 @@ export default function Home() {
 	//使いたい　https://github.com/spite/THREE.MeshLine?tab=readme-ov-file
 	//データだけ引っ張ってblenderでキービジュアルを作ろう
 	const chiangmai=new Vector3(...convertVertex(98.98, 18.73))
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	/*
 	const meshline=country.map((v, i) =>
 		<mesh onPointerOver={console.log} key={i}>
 			<meshLineGeometry points={country_v[i].flat()}/>
 			<meshLineMaterial color="#ddd" lineWidth={0.002}/>
 		</mesh>
-	)
+	)*/
 	return (
 		<Canvas
 			style={{width: "100%", height: "100%"}}
