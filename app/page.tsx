@@ -11,48 +11,13 @@ import {Vector3} from "three";
 extend({MeshLineGeometry, MeshLineMaterial})
 
 function convertVertex(latitude: number, longitude: number) {
-	const lambda = latitude * Math.PI / 180,
-		phi = longitude * Math.PI / 180,
-		cosPhi = Math.cos(phi);
+	const lambda = latitude * Math.PI / 180, phi = longitude * Math.PI / 180
 	return [
-		cosPhi * Math.sin(lambda),
+		Math.cos(phi) * Math.sin(lambda),
 		Math.sin(phi),
-		cosPhi * Math.cos(lambda),
+		Math.cos(phi) * Math.cos(lambda),
 	];
 }
-const fragmentShader = `
-attribute vec3 position;
-attribute vec3 previous;
-attribute vec3 next;
-attribute float side;
-attribute float width;
-uniform mat4 projectionMatrix;
-uniform mat4 modelViewMatrix;
-uniform vec2 resolution;
-varying vec2 vUV;
-
-void main() {
-    vec4 finalPosition = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    vec4 prevPos = projectionMatrix * modelViewMatrix * vec4(previous, 1.0);
-    vec4 nextPos = projectionMatrix * modelViewMatrix * vec4(next, 1.0);
-
-    vec2 aspect = vec2(resolution.x / resolution.y, 1.0);
-    vec2 prevScreen = prevPos.xy / prevPos.w * aspect;
-    vec2 nextScreen = nextPos.xy / nextPos.w * aspect;
-    vec2 currentScreen = finalPosition.xy / finalPosition.w * aspect;
-
-    vec2 dir = normalize(nextScreen - prevScreen);
-    vec2 normal = vec2(-dir.y, dir.x);
-    normal /= aspect;
-
-    float pixelWidth = width / resolution.y;
-    vec2 offset = normal * side * pixelWidth;
-
-    finalPosition.xy += offset * finalPosition.w;
-    vUV = uv;
-    gl_Position = finalPosition;
-}
-`;
 
 export default function Home() {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -102,7 +67,6 @@ export default function Home() {
 					/>
 				</bufferGeometry>
 				<lineBasicMaterial color={"#ddd"} linewidth={3}/>
-				<shaderMaterial vertexShader={fragmentShader}/>
 			</lineSegments>
 			<mesh>
 				<sphereGeometry args={[1, 24, 24]}/>
