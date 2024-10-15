@@ -5,8 +5,8 @@ import {MeshLineGeometry, MeshLineMaterial} from 'meshline'
 import {OrbitControls} from '@react-three/drei'
 import * as topojson from "topojson-client"
 import atlas from "world-atlas/countries-50m.json"
-import {SVGRenderer} from 'three/addons/renderers/SVGRenderer.js';
-import { Vector3, Quaternion } from 'three'
+import {Vector3, Quaternion, Color} from 'three'
+import {GUI} from 'lil-gui'
 
 extend({MeshLineGeometry, MeshLineMaterial})
 
@@ -20,6 +20,7 @@ function convertVertex(latitude: number, longitude: number) {
 }
 
 export default function Home() {
+	const [show, setShow] = React.useState<boolean>(true)
 	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 	// @ts-expect-error
 	const country = topojson.mesh(atlas, atlas.objects.countries).coordinates
@@ -34,7 +35,7 @@ export default function Home() {
 	//Material with color = 'white' is not white https://github.com/pmndrs/react-three-fiber/discussions/1290#discussioncomment-668649
 	//使いたい　https://github.com/spite/THREE.MeshLine?tab=readme-ov-file
 	//データだけ引っ張ってblenderでキービジュアルを作ろう
-	const chiangmai = false
+	const chiangmai = [101.4, 14.73]
 	/*
 	const meshline=country.map((v, i) =>
 		<mesh onPointerOver={console.log} key={i}>
@@ -42,26 +43,29 @@ export default function Home() {
 			<meshLineMaterial color="#ddd" lineWidth={0.002}/>
 		</mesh>
 	)*/
-	const lineMaterial = <lineBasicMaterial color={"#ddd"} linewidth={2}/>
+
+	React.useEffect(() => {
+		const gui = new GUI()
+		const x = {
+			show: false
+		}
+		gui.add(x, 'show').onChange(setShow)
+		return () => {
+			gui.destroy()
+		}
+	}, [])
+	const lineMaterial = <lineBasicMaterial color={"white"} linewidth={2}/>
+	const background=new Color("black")
 	return (
 		<Canvas
 			style={{width: "100%", height: "100%"}}
 			linear
 			flat
 			camera={{position: [1, 1, -1], near: 0.001, fov: 90}}
-			gl={chiangmai ? ((canvas) => {
-				const gl = new SVGRenderer()
-				if ("parentNode" in canvas) {
-					const parent = canvas.parentNode
-					if (parent) {
-						parent.removeChild(canvas)
-						parent.appendChild(gl.domElement)
-					}
-				}
-				return gl
-			}) : {antialias: false}}
+			gl={{antialias: false}}
+			scene={{background: background}}
 		>
-			<OrbitControls target={chiangmai ? new Vector3(...convertVertex(98.98, 18.73)):undefined}/>
+			<OrbitControls target={new Vector3(...convertVertex(chiangmai[0], chiangmai[1]))}/>
 			<lineSegments scale={1}>
 				<bufferGeometry>
 					<bufferAttribute
@@ -81,16 +85,61 @@ export default function Home() {
 			</lineSegments>
 			<Horizon
 				radius={1}
-				faceMaterial={<meshBasicMaterial color={"white"} side={2}/>}
+				faceMaterial={<meshBasicMaterial color={background}/>}
 				lineMaterial={lineMaterial}
 			/>
+			{
+				[...Array(show?100:0)].map((_, i) => <Line latitude={chiangmai[0]} longitude={chiangmai[1]} seed={i} key={i}/>)
+			}
+
 		</Canvas>
 	);
+}
+const colors = [
+	0xed6a5a,
+	0xf4f1bb,
+	0x9bc1bc,
+	0x5ca4a9,
+	0xe6ebe0,
+	0xf0b67f,
+	0xfe5f55,
+	0xd6d1b1,
+	0xc7efcf,
+	0xeef5db,
+	0x50514f,
+	0xf25f5c,
+	0xffe066,
+	0x247ba0,
+	0x70c1b3
+];
+const Line = (props: {
+	latitude: number,
+	longitude: number,
+	seed: number,
+}) => {
+	const x = Math.sin(props.seed * 7), y = Math.cos(props.seed * 13)
+	const pos_random = 1
+	const from_random = 10
+	const pos = convertVertex(props.latitude + pos_random * x, props.longitude + pos_random * y)
+	const from = convertVertex(props.latitude + from_random * x, props.longitude + from_random * y)
+	console.log(pos, from)
+	const rate = [...Array(20)].map((_, i, a) => i / (a.length - 1))
+	const color = new Color(colors[Math.floor(Math.random() * colors.length)])
+	const h_random = (Math.sin(props.seed * 29) * 0.5 + 0.5) * 0.05
+	return <mesh onPointerOver={console.log} key={props.seed}>
+		<meshLineGeometry points={rate.map(v => {
+			const h = 1 + 4 * v * (1 - v) * h_random
+			const r = [0, 1, 2].map(i => (pos[i] * v + from[i] * (1 - v)) * h)
+			return r
+		})}/>
+		<meshLineMaterial color={color} lineWidth={0.0002}/>
+	</mesh>
 }
 const Horizon = (props: {
 	radius: number,
 	faceMaterial: React.ReactNode,
 	lineMaterial: React.ReactNode
+	visible?: boolean
 }) => {
 	const [pos, setPos] = React.useState(new Vector3())
 	useFrame((state) => {
@@ -100,12 +149,12 @@ const Horizon = (props: {
 	const angle_sin = Math.sqrt(1 - angle_cos * angle_cos)
 	const quaternion = new Quaternion();
 	quaternion.setFromUnitVectors(new Vector3(0, 1, 0), pos.normalize().multiplyScalar(-1))
-	const circle_vector=[...Array(100)].map((_,i,a)=>i/a.length*2*Math.PI).map(v=>[Math.sin(v), 1, Math.cos(v)])
-	const circle_index=circle_vector.map((_,i,a)=>[i,(i+1)%a.length]).flat()
-	const circle_index2=circle_vector.map((_,i,a)=>[i,0,(i+1)%a.length]).slice(1).flat()
-	const scale=new Vector3(angle_sin, -angle_cos, angle_sin).multiplyScalar(props.radius)
+	const circle_vector = [...Array(100)].map((_, i, a) => i / a.length * 2 * Math.PI).map(v => [Math.sin(v), 1, Math.cos(v)])
+	const circle_index = circle_vector.map((_, i, a) => [i, (i + 1) % a.length]).flat()
+	const circle_index2 = circle_vector.map((_, i, a) => [0, i, (i + 1) % a.length]).slice(1).flat()
+	const scale = new Vector3(angle_sin, -angle_cos, angle_sin).multiplyScalar(props.radius)
 	return <>
-		<mesh quaternion={quaternion} scale={scale}>
+		<mesh quaternion={quaternion} scale={scale.clone().multiplyScalar(props.radius)} visible={props.visible}>
 			<bufferGeometry>
 				<bufferAttribute
 					attach='attributes-position'
@@ -122,7 +171,8 @@ const Horizon = (props: {
 			</bufferGeometry>
 			{props.faceMaterial}
 		</mesh>
-		<lineSegments quaternion={quaternion} scale={scale}>
+		<lineSegments quaternion={quaternion} scale={scale.clone().multiplyScalar(props.radius * 1.001)}
+					  visible={props.visible}>
 			<bufferGeometry>
 				<bufferAttribute
 					attach='attributes-position'
