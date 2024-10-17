@@ -1,6 +1,6 @@
 "use client"
 import React from 'react'
-import {Canvas, extend, useFrame} from '@react-three/fiber'
+import {Canvas, extend, useFrame, useThree} from '@react-three/fiber'
 import {MeshLineGeometry, MeshLineMaterial} from 'meshline'
 import {OrbitControls} from '@react-three/drei'
 import * as topojson from "topojson-client"
@@ -29,7 +29,6 @@ export default function Home() {
 		const offset = a.slice(0, i).reduce((a, b) => a + b, 0)
 		return [...Array(v - 1)].map((_, i) => [offset + i, offset + i + 1])
 	}).flat()
-	console.log(JSON.stringify(indices))
 	const global_i = new Uint32Array(indices.flat())
 	//Material with color = 'white' is not white https://github.com/pmndrs/react-three-fiber/discussions/1290#discussioncomment-668649
 	//使いたい　https://github.com/spite/THREE.MeshLine?tab=readme-ov-file
@@ -87,25 +86,28 @@ export default function Home() {
 		</Canvas>
 	);
 }
+const vertexShader=`void main() {
+	mat4 viewMatrixOnlyTranslate=mat4(
+        vec4(1.0, 0.0, 0.0, 0.0),
+        vec4(0.0, 1.0, 0.0, 0.0),
+        vec4(0.0, 0.0, 1.0, 0.0),
+        viewMatrix*vec4(0.0, 0.0, 0.0, 1.0)
+    );
+	vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+	vec4 viewPosition = viewMatrixOnlyTranslate* modelPosition;
+	vec4 projectedPosition = projectionMatrix * viewPosition;
+	gl_Position = projectedPosition;
+}`
 const Horizon = (props: {
 	radius: number,
 	faceMaterial: React.ReactNode,
 	lineMaterial: React.ReactNode
 }) => {
-	const [pos, setPos] = React.useState(new Vector3())
-	useFrame((state) => {
-		setPos(new Vector3(state.camera.position.x, state.camera.position.y, state.camera.position.z))
-	});
-	const angle_cos = Math.min(props.radius / pos.length(), 1)
-	const angle_sin = Math.sqrt(1 - angle_cos * angle_cos)
-	const quaternion = new Quaternion();
-	quaternion.setFromUnitVectors(new Vector3(0, 1, 0), pos.normalize().multiplyScalar(-1))
-	const circle_vector=[...Array(100)].map((_,i,a)=>i/a.length*2*Math.PI).map(v=>[Math.sin(v), 1, Math.cos(v)])
+	const circle_vector=[...Array(100)].map((_,i,a)=>i/a.length*2*Math.PI).map(v=>[Math.cos(v), Math.sin(v), 1])
 	const circle_index=circle_vector.map((_,i,a)=>[i,(i+1)%a.length]).flat()
-	const circle_index2=circle_vector.map((_,i,a)=>[i,0,(i+1)%a.length]).slice(1).flat()
-	const scale=new Vector3(angle_sin, -angle_cos, angle_sin).multiplyScalar(props.radius)
+	const circle_index2=circle_vector.map((_,i,a)=>[0,i,(i+1)%a.length]).slice(1).flat()
 	return <>
-		<mesh quaternion={quaternion} scale={scale}>
+		<mesh>
 			<bufferGeometry>
 				<bufferAttribute
 					attach='attributes-position'
@@ -122,7 +124,7 @@ const Horizon = (props: {
 			</bufferGeometry>
 			{props.faceMaterial}
 		</mesh>
-		<lineSegments quaternion={quaternion} scale={scale}>
+		<lineSegments>
 			<bufferGeometry>
 				<bufferAttribute
 					attach='attributes-position'
@@ -138,6 +140,7 @@ const Horizon = (props: {
 				/>
 			</bufferGeometry>
 			{props.lineMaterial}
+			<shaderMaterial vertexShader={vertexShader}/>
 		</lineSegments>
 	</>
 }
