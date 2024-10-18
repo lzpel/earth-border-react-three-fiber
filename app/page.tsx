@@ -61,7 +61,7 @@ export default function Home() {
 			}) : {antialias: false}}
 		>
 			<OrbitControls target={chiangmai ? new Vector3(...convertVertex(98.98, 18.73)) : undefined}/>
-			<lineSegments scale={2}>
+			<lineSegments scale={1}>
 				<bufferGeometry>
 					<bufferAttribute
 						attach='attributes-position'
@@ -79,7 +79,7 @@ export default function Home() {
 				{lineMaterial}
 			</lineSegments>
 			<Horizon
-				radius={2}
+				radius={1}
 				faceMaterial={<meshBasicMaterial color={"white"} side={2}/>}
 				lineMaterial={lineMaterial}
 			/>
