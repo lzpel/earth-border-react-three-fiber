@@ -1,12 +1,12 @@
 "use client"
 import React from 'react'
-import {Canvas, extend, useFrame, useThree} from '@react-three/fiber'
+import {Canvas, extend} from '@react-three/fiber'
 import {MeshLineGeometry, MeshLineMaterial} from 'meshline'
 import {OrbitControls} from '@react-three/drei'
 import * as topojson from "topojson-client"
 import atlas from "world-atlas/countries-50m.json"
 import {SVGRenderer} from 'three/addons/renderers/SVGRenderer.js';
-import { Vector3, Quaternion } from 'three'
+import { Vector3 } from 'three'
 
 extend({MeshLineGeometry, MeshLineMaterial})
 
@@ -60,7 +60,7 @@ export default function Home() {
 				return gl
 			}) : {antialias: false}}
 		>
-			<OrbitControls target={chiangmai ? new Vector3(...convertVertex(98.98, 18.73)):undefined}/>
+			<OrbitControls target={true ? new Vector3(...convertVertex(98.98, 18.73)):undefined}/>
 			<lineSegments scale={1}>
 				<bufferGeometry>
 					<bufferAttribute
@@ -89,6 +89,7 @@ export default function Home() {
 //EX,EY,EZは直行していないので若干歪むのかも
 //グランシュミットの直交化などでどうにかするか？
 //(X-O).xyz=PV*vec4(0.01, 0.0, 0.0, 0.0)で元の位置の情報が消えている
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const vertexShader=`void main() {
 	vec4 modelPosition = modelMatrix * vec4(position, 1.0);
     mat4 PV = projectionMatrix * viewMatrix;
@@ -105,6 +106,19 @@ const vertexShader=`void main() {
         vec4(EZ, 0.0),
         vec4(0.0, 0.0, 0.0, 1.0)
     ));
+	gl_Position = PV * R * modelPosition;
+}`
+//直交化と投影に含まれる回転も含めて上手くいっている感がある
+//ただ四次元行列の逆行列の計算コストがきになる
+const vertexShader2=`void main() {
+	vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+    mat4 PV = projectionMatrix * viewMatrix;
+    mat4 IPV = inverse(PV);
+    vec3 EZ = normalize((IPV * vec4(0,0,1,0)).xyz);
+    vec3 EY_ = (IPV * vec4(0,1,0,0)).xyz;
+    vec3 EY = normalize(EY_ - dot(EY_, EZ)*EZ);
+    vec3 EX = cross(EZ, EY);
+    mat4 R = mat4(mat3(EX,EY,EZ));
 	gl_Position = PV * R * modelPosition;
 }`
 const Horizon = (props: {
@@ -149,7 +163,7 @@ const Horizon = (props: {
 				/>
 			</bufferGeometry>
 			{props.lineMaterial}
-			<shaderMaterial vertexShader={vertexShader}/>
+			<shaderMaterial vertexShader={vertexShader2}/>
 		</lineSegments>
 	</>
 }
