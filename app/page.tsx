@@ -86,24 +86,33 @@ export default function Home() {
 		</Canvas>
 	);
 }
+//EX,EY,EZは直行していないので若干歪むのかも
+//グランシュミットの直交化などでどうにかするか？
+//(X-O).xyz=PV*vec4(0.01, 0.0, 0.0, 0.0)で元の位置の情報が消えている
 const vertexShader=`void main() {
-	mat4 viewMatrixOnlyTranslate=mat4(
-        vec4(1.0, 0.0, 0.0, 0.0),
-        vec4(0.0, 1.0, 0.0, 0.0),
-        vec4(0.0, 0.0, 1.0, 0.0),
-        viewMatrix*vec4(0.0, 0.0, 0.0, 1.0)
-    );
 	vec4 modelPosition = modelMatrix * vec4(position, 1.0);
-	vec4 viewPosition = viewMatrixOnlyTranslate* modelPosition;
-	vec4 projectedPosition = projectionMatrix * viewPosition;
-	gl_Position = projectedPosition;
+    mat4 PV = projectionMatrix * viewMatrix;
+    vec4 X = PV * vec4(0.01, 0.0, 0.0, 1.0);
+    vec4 Y = PV * vec4(0.0, 0.01, 0.0, 1.0);
+    vec4 Z = PV * vec4(0.0, 0.0, 0.01, 1.0);
+    vec4 O = PV * vec4(0.0, 0.0, 0.0, 1.0);
+    vec3 EX = normalize((X-O).xyz);
+    vec3 EY = normalize((Y-O).xyz);
+    vec3 EZ = normalize((Z-O).xyz);
+    mat4 R=transpose(mat4(
+        vec4(EX, 0.0),
+        vec4(EY, 0.0),
+        vec4(EZ, 0.0),
+        vec4(0.0, 0.0, 0.0, 1.0)
+    ));
+	gl_Position = PV * R * modelPosition;
 }`
 const Horizon = (props: {
 	radius: number,
 	faceMaterial: React.ReactNode,
 	lineMaterial: React.ReactNode
 }) => {
-	const circle_vector=[...Array(100)].map((_,i,a)=>i/a.length*2*Math.PI).map(v=>[Math.cos(v), Math.sin(v), 1])
+	const circle_vector=[...Array(100)].map((_,i,a)=>i/a.length*2*Math.PI).map(v=>[Math.cos(v), Math.sin(v), -1])
 	const circle_index=circle_vector.map((_,i,a)=>[i,(i+1)%a.length]).flat()
 	const circle_index2=circle_vector.map((_,i,a)=>[0,i,(i+1)%a.length]).slice(1).flat()
 	return <>
