@@ -91,10 +91,8 @@ const Horizon = (props: {
 					itemSize={1}
 				/>
 			</bufferGeometry>
-			{
-				 three.scene.background instanceof THREE.Color ?
-					<meshBasicMaterial color={three.scene.background} side={2}/>:null
-			}
+			{(three.scene.background instanceof THREE.Color) &&
+				<meshBasicMaterial color={three.scene.background} side={2}/>}
 		</mesh>
 		<lineSegments>
 			<bufferGeometry>
