@@ -1,9 +1,8 @@
 "use client"
 import React, {useRef} from 'react'
 import {useFrame, useThree} from '@react-three/fiber'
-import * as topojson from "topojson-client"
-import atlas from "world-atlas/countries-50m.json"
 import * as THREE from 'three'
+import coordinates from "@/function/coordinates";
 
 function convertVertex(latitude: number, longitude: number) {
 	const lambda = latitude * Math.PI / 180, phi = longitude * Math.PI / 180
@@ -18,9 +17,7 @@ export default function Earth(props: {
 	radius: number
 	lineMaterial: React.ReactNode
 }) {
-	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-	// @ts-expect-error
-	const country = topojson.mesh(atlas, atlas.objects.countries).coordinates
+	const country = coordinates("countries")
 	const country_v = country.map(v => v.map(v => convertVertex(v[0], v[1])))
 	const global_v = new Float32Array(country_v.flat(2))
 	const indices = country.map(v => v.length).map((v, i, a) => {
